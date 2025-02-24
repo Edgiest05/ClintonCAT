@@ -109,7 +109,7 @@ export class Main {
      */
     onBrowserExtensionInstalled(): void {
         console.log('ClintonCAT Extension Installed');
-        Preferences.initDefaults(new ChromeSyncStorage(), new ChromeLocalStorage()).then(() => {
+        void Preferences.initDefaults(new ChromeSyncStorage(), new ChromeLocalStorage()).then(() => {
             Preferences.dump();
             this.indicateStatus();
         });

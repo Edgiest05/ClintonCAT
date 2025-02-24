@@ -3,13 +3,23 @@ import ObservableValue from '@/common/observables/observable-value';
 import { IStorageBackend } from '@/storage/istorage-backend';
 import { Nullable } from '@/utils/types';
 
-class Preferences {
+export enum NotificationType {
+    ICON_ONLY,
+    TOAST,
+    OTHER_TAB,
+    NOTIFICATION,
+    TOTAL_NOTIFICATION_TYPES,
+}
+
+export default class Preferences {
     static readonly IS_ENABLED_KEY = 'is_enabled';
     static readonly DOMAIN_EXCLUSIONS_KEY = 'domain_exclusions';
+    static readonly NOTFICATION_TYPE_KEY = 'notification_type';
     static readonly DEFAULT_DOMAIN_EXCLUSIONS = ['rossmanngroup.com'];
 
     static isEnabled = new ObservableValue<boolean>(true);
     static domainExclusions = new ObservableSet<string>();
+    static notificationType = new ObservableValue<NotificationType>(NotificationType.ICON_ONLY);
 
     // Injected storage backends  (TODO: do we need both?)
     // Sync is used to share data across browsers if logged in, e.g. plugin settings
@@ -25,6 +35,24 @@ class Preferences {
         this.localStore = localStore;
     }
 
+    private static clearAllListeners() {
+        this.isEnabled.removeAllListeners();
+        this.domainExclusions.removeAllListeners();
+        this.notificationType.removeAllListeners();
+    }
+
+    private static addDefaultCallbacks() {
+        this.isEnabled.addListener(this.IS_ENABLED_KEY, (result: boolean) => {
+            void this.setPreference(Preferences.IS_ENABLED_KEY, result);
+        });
+        this.domainExclusions.addListener(this.DOMAIN_EXCLUSIONS_KEY, (result: string[]) => {
+            void this.setPreference(Preferences.DOMAIN_EXCLUSIONS_KEY, result);
+        });
+        this.notificationType.addListener(this.NOTFICATION_TYPE_KEY, (result: NotificationType) => {
+            void this.setPreference(Preferences.NOTFICATION_TYPE_KEY, result as number);
+        });
+    }
+
     /**
      * Get defaults from preferenceStorage, if available,
      * otherwise use some default values. This method needs to
@@ -33,23 +61,15 @@ class Preferences {
     static async initDefaults(preferenceStore: IStorageBackend, localStore: IStorageBackend) {
         console.log('Defaulting settings');
         this.setBackingStores(preferenceStore, localStore);
-        // Reset callbacks
-        this.isEnabled.removeAllListeners();
-        this.domainExclusions.removeAllListeners();
-        // Set up default callbacks
-        this.isEnabled.addListener(this.IS_ENABLED_KEY, (result: boolean) => {
-            void this.setPreference(Preferences.IS_ENABLED_KEY, result);
-        });
-
-        this.domainExclusions.addListener(this.DOMAIN_EXCLUSIONS_KEY, (result: string[]) => {
-            void this.setPreference(Preferences.DOMAIN_EXCLUSIONS_KEY, result);
-        });
+        this.clearAllListeners();
 
         // Attempt preference retrieval
         const rawIsEnabled = await this.getPreference(this.IS_ENABLED_KEY);
         if (typeof rawIsEnabled === 'boolean') {
             this.isEnabled.value = rawIsEnabled;
+            this.addDefaultCallbacks();
         } else {
+            this.addDefaultCallbacks();
             this.isEnabled.value = true;
         }
         const rawDomainExclusions = await this.getPreference(this.DOMAIN_EXCLUSIONS_KEY);
@@ -57,8 +77,18 @@ class Preferences {
             this.domainExclusions.value = rawDomainExclusions.filter(
                 (item): item is string => typeof item === 'string'
             );
+            this.addDefaultCallbacks();
         } else {
+            this.addDefaultCallbacks();
             this.domainExclusions.value = Preferences.DEFAULT_DOMAIN_EXCLUSIONS;
+        }
+        const rawNotificationType = await this.getPreference(this.NOTFICATION_TYPE_KEY);
+        if (typeof rawNotificationType === 'number') {
+            this.notificationType.value = rawNotificationType as NotificationType;
+            this.addDefaultCallbacks();
+        } else {
+            this.addDefaultCallbacks();
+            this.notificationType.value = NotificationType.ICON_ONLY;
         }
     }
 
@@ -107,5 +137,3 @@ class Preferences {
         return value;
     }
 }
-
-export default Preferences;

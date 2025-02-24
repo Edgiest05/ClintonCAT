@@ -75,11 +75,13 @@ const Popup = () => {
 const rootElement: HTMLElement | null = document.getElementById('root');
 if (rootElement instanceof HTMLElement) {
     const root = createRoot(rootElement);
-    root.render(
-        <React.StrictMode>
-            <Popup />
-        </React.StrictMode>
-    );
+    void Preferences.initDefaults(new ChromeSyncStorage(), new ChromeLocalStorage()).then(() => {
+        root.render(
+            <React.StrictMode>
+                <Popup />
+            </React.StrictMode>
+        );
+    });
 } else {
     throw Error('No root element was found');
 }

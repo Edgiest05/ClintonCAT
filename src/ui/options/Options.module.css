@@ -160,3 +160,7 @@
 .toggleLabel input:checked + .toggleSlider::before {
     transform: translateX(22px);
 }
+
+.radioList {
+    list-style: none;
+}
