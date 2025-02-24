@@ -3,12 +3,18 @@ import { createRoot } from 'react-dom/client';
 import * as styles from './options.module.css';
 import classNames from 'classnames';
 import Preferences from './preferences';
+import { NotificationType } from './preferences';
 import ChromeSyncStorage from './storage/chrome-sync-storage';
 import ChromeLocalStorage from './storage/chrome-local-storage';
 import * as psl from 'psl';
 import { ParsedDomain } from 'psl';
 
-Preferences.initDefaults(new ChromeSyncStorage(), new ChromeLocalStorage());
+const NOTIFICATION_IDS = ['iconOnly', 'toast', 'otherTab', 'notification'];
+const NOTIFICATION_LABELS = ['Icon only', 'In-page toast', 'Background tab', 'Notification'];
+
+if (NOTIFICATION_IDS.length !== (NotificationType.TOTAL_NOTIFICATION_TYPES as number)) {
+    throw Error('NOTIFICATION_IDS length does not much NotificationTypes enum');
+}
 
 const Options = () => {
     const [items, setItems] = useState<string[]>([]);
@@ -38,6 +44,13 @@ const Options = () => {
 
     const clearList = () => {
         Preferences.domainExclusions.value = [];
+    };
+
+    const changeNotificationType = (value: number) => {
+        const newType = value as NotificationType;
+        if (newType !== Preferences.notificationType.value) {
+            Preferences.notificationType.value = newType;
+        }
     };
 
     const onKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -83,6 +96,28 @@ const Options = () => {
                 </div>
 
                 <div className={styles.settingsColumn}>
+                    <h2 className={styles.columnTitle}>Notification type</h2>
+                    <div className={styles.settingsContainer}>
+                        <p>Choose your preferred notification type from the following</p>
+                        <div>
+                            {NOTIFICATION_IDS.map((id: string, index: number) => (
+                                <li key={index} className={styles.radioList}>
+                                    <input
+                                        type="radio"
+                                        id={id}
+                                        name="notification-type"
+                                        value={index}
+                                        onChange={() => changeNotificationType(index)}
+                                        defaultChecked={index === (Preferences.notificationType.value as number)}
+                                    />
+                                    <label htmlFor={id}>{NOTIFICATION_LABELS[index]}</label>
+                                </li>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                <div className={styles.settingsColumn}>
                     <h2 className={styles.columnTitle}>Other Settings</h2>
                     <div className={styles.settingsContainer}>
                         <p>TODO</p>
@@ -101,11 +136,13 @@ const Options = () => {
 const rootElement: HTMLElement | null = document.getElementById('root');
 if (rootElement instanceof HTMLElement) {
     const root = createRoot(rootElement);
-    root.render(
-        <React.StrictMode>
-            <Options />
-        </React.StrictMode>
-    );
+    void Preferences.initDefaults(new ChromeSyncStorage(), new ChromeLocalStorage()).then(() => {
+        root.render(
+            <React.StrictMode>
+                <Options />
+            </React.StrictMode>
+        );
+    });
 } else {
     throw Error('No root element was found');
 }
