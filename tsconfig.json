@@ -13,7 +13,8 @@
         "paths": {
             "@/*": ["src/*"]
         },
-        "resolveJsonModule": true
+        "resolveJsonModule": true,
+        "skipLibCheck": true
     },
     "exclude": ["jest.config.ts"]
 }

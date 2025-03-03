@@ -1,7 +1,7 @@
 import { getDomainWithoutSuffix, parse } from 'tldts';
 import ContentScanner from '@/common/services/content-scanner';
 import { IScanParameters } from '@/common/services/content-scanner.types';
-import Preferences from '@/common/services/preferences';
+import Preferences, { NotificationType } from '@/common/services/preferences';
 import DOMMessenger from '@/content-scanners/helpers/dom-messenger';
 import { CATWikiPageSearchResults, PagesDB } from '@/database';
 import ChromeLocalStorage from '@/storage/chrome/chrome-local-storage';
@@ -41,14 +41,28 @@ export class Main {
         void chrome.action.setBadgeText({ text: pages.totalPagesFound.toString() });
         console.log(pages);
 
-        // Example: show a notification about the found pages
-        // NOTE: Requires "notifications" permission in your manifest.json
-        chrome.notifications.create({
-            type: 'basic',
-            iconUrl: 'icon48.png', // TODO: Use a proper icon
-            title: 'CAT Pages Found',
-            message: `Found ${pages.totalPagesFound.toString()} page(s).`,
-        });
+        const foundString = `Found ${pages.totalPagesFound.toString()} page(s).`;
+        switch (Preferences.notificationType.value) {
+            case NotificationType.ICON_ONLY:
+                break;
+            case NotificationType.TOAST:
+                void chrome.runtime.sendMessage({ text: foundString });
+                break;
+            case NotificationType.OTHER_TAB:
+                break;
+            case NotificationType.NOTIFICATION:
+                // Example: show a notification about the found pages
+                // NOTE: Requires "notifications" permission in your manifest.json
+                chrome.notifications.create({
+                    type: 'basic',
+                    iconUrl: 'icon48.png', // TODO: Use a proper icon
+                    title: 'CAT Pages Found',
+                    message: foundString,
+                });
+                break;
+            default:
+                throw Error('Switch case not exhaustive');
+        }
     }
 
     /**
